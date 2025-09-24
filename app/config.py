@@ -1,5 +1,10 @@
 import os
+from dotenv import load_dotenv
 
-# Caminho da pasta com os XMLs
-# Pode ser configurado por variável de ambiente ou editando direto aqui
-XML_FOLDER = os.getenv("XML_FOLDER", "C:/ex_notas")  # exemplo no Windows
+load_dotenv()
+
+DB_HOST = os.getenv("DB_HOST")
+DB_NAME = os.getenv("DB_NAME")
+DB_USER = os.getenv("DB_USER")
+DB_PASSWORD = os.getenv("DB_PASSWORD")
+XML_FOLDER = os.getenv("XML_FOLDER", "./xmls")

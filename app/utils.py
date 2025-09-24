@@ -45,14 +45,16 @@ def get_client_document(root: ET.Element) -> Optional[str]:
         return cnpj_tag.text
     return None
 
-def get_emission_date(root: ET.Element) -> Optional[str]:
-    data_tag = find_tag(root, "ide/dhEmi")  # corrigido (sem nfe:)
+def get_emission_date(root: ET.Element) -> Optional[datetime]:
+    data_tag = find_tag(root, "ide/dhEmi")
     if data_tag is not None and data_tag.text:
         try:
-            return datetime.fromisoformat(data_tag.text).isoformat()
+            return datetime.fromisoformat(data_tag.text)
         except Exception:
-            # fallback: tenta cortar só data
-            return data_tag.text[:10]
+            try:
+                return datetime.strptime(data_tag.text[:10], "%Y-%m-%d")
+            except Exception:
+                return None
     return None
 
 def text_in_tag(tag: str, root) -> str:
@@ -69,22 +71,19 @@ def processa_xml(filepath: str, filename: str, documento_target: Optional[str] =
         if documento_target and doc_cliente != documento_target:
             return None
 
-        nome_cliente = text_in_tag("dest/xNome", root)
-        transportadora = text_in_tag("transp/transporta/xNome", root)
-        n_nf = text_in_tag("ide/nNF", root)
-        cnpj = text_in_tag("emit/CNPJ", root)
-        chave_acess = get_access_key(root)
-        data_emissao = get_emission_date(root)
-        mensagem = get_mensagem(transportadora, n_nf, doc_cliente, cnpj)
-
         nota = {
             "arquivo": filename,
             "documento": doc_cliente or noinf,
-            "cliente": nome_cliente,
-            "transportadora": transportadora,
-            "mensagem": mensagem,
-            "data_emissao": data_emissao or noinf,
-            "chave_acesso": chave_acess
+            "cliente": text_in_tag("dest/xNome", root),
+            "transportadora": text_in_tag("transp/transporta/xNome", root),
+            "mensagem": get_mensagem(
+                text_in_tag("transp/transporta/xNome", root),
+                text_in_tag("ide/nNF", root),
+                doc_cliente,
+                text_in_tag("emit/CNPJ", root)
+            ),
+            "data_emissao": get_emission_date(root) or datetime.now(),
+            "chave_acesso": get_access_key(root)
         }
 
         return nota

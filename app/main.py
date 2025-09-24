@@ -1,54 +1,27 @@
-from fastapi import FastAPI
-from app.utils import processa_xml
-from app.config import XML_FOLDER
-from app.database import buscar_nota_mais_recente, criar_tabela
-import os
-import importar_xmls
-import uvicorn
+from fastapi import FastAPI, Depends
+from sqlalchemy.ext.asyncio import AsyncSession
+from .database import get_db, Base, engine
+from .crud import buscar_nota_mais_recente, inserir_nota
+from . import crud, models
+import asyncio
 
-app = FastAPI(
-    title="API de Consulta de NF-e",
-    description="Consulta a NF-e mais recente com base no CPF ou CNPJ do cliente",
-    version="1.0"
-)
+app = FastAPI()
+
+# Criar tabelas (apenas para testes — em produção use Alembic!)
+async def init_models():
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+
+asyncio.run(init_models())
 
 @app.get("/")
-def root():
-    return {"message": "Hello, Railway!"}
+async def root():
+    return {"message": "API rodando no Vercel + Neon PostgreSQL!"}
 
-def importar_xml():
-    criar_tabela()  # garante que a tabela existe
+@app.post("/notas/")
+async def criar_nota(nota: dict, db: AsyncSession = Depends(get_db)):
+    return await inserir_nota(db, nota)
 
-    arquivos_processados = 0
-    for filename in os.listdir(XML_FOLDER):
-        if filename.endswith(".xml"):
-            filepath = os.path.join(XML_FOLDER, filename)
-
-            # Aqui não passamos documento alvo, então forçamos processamento de todos
-            nota = processa_xml(filepath, filename, documento_target=None)
-
-            if nota:
-                arquivos_processados += 1
-
-    print(f"Importação concluída! {arquivos_processados} arquivos processados.")
-
-if __name__ == "__main__":
-    importar_xml()
-    port = int(os.environ.get("PORT", 8000))
-    uvicorn.run("app.main:app", host="0.0.0.0", port=port, reload=False)
-
-
-@app.get("/consulta/{documento}", tags=["Consultas"])
-def consulta_por_documento(documento: str):
-    resultado = buscar_nota_mais_recente(documento)
-    if resultado:
-        return resultado
-    return {"message": "Nenhuma nota encontrada para esse CPF/CNPJ"}
-
-@app.post("/importar", tags=["Importar XML"])
-def importar_notas():
-    """
-    Importa os XMLs da pasta para o banco de dados.
-    """
-    msg = importar_xmls.importar_xmls()
-    return {"mensagem": msg}
+@app.get("/notas/{documento}")
+async def buscar_nota_mais_recente_por_documento(documento: str, db: AsyncSession):
+    return await buscar_nota_mais_recente(db, documento)
