@@ -1,10 +1,8 @@
 from fastapi import FastAPI
-from fastapi.openapi.docs import get_swagger_ui_html
-from .utils import buscar_nota_mais_recente_por_documento
-import os
 from app.utils import processa_xml
 from app.config import XML_FOLDER
 from app.database import buscar_nota_mais_recente, criar_tabela
+import os
 import importar_xmls
 
 app = FastAPI(
@@ -12,6 +10,10 @@ app = FastAPI(
     description="Consulta a NF-e mais recente com base no CPF ou CNPJ do cliente",
     version="1.0"
 )
+
+@app.get("/")
+def root():
+    return {"message": "Hello, Railway!"}
 
 def importar_xml():
     criar_tabela()  # garante que a tabela existe
