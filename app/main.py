@@ -4,6 +4,7 @@ from app.config import XML_FOLDER
 from app.database import buscar_nota_mais_recente, criar_tabela
 import os
 import importar_xmls
+import uvicorn
 
 app = FastAPI(
     title="API de Consulta de NF-e",
@@ -33,6 +34,8 @@ def importar_xml():
 
 if __name__ == "__main__":
     importar_xml()
+    port = int(os.environ.get("PORT", 8000))
+    uvicorn.run("app.main:app", host="0.0.0.0", port=port, reload=False)
 
 
 @app.get("/consulta/{documento}", tags=["Consultas"])
