@@ -1,3 +1,3 @@
 fastapi
 uvicorn[standard]
-sqlite3-bro
+psycopg2-binary
